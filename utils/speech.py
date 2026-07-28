@@ -105,5 +105,5 @@ class SpeechHandler:
             return None
 
     def stop(self):
-        """Остановить синтез речи.""
+        """Остановить синтез речи."""
         self.tts_engine.stop()

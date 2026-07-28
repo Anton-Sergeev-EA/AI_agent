@@ -1,62 +1,37 @@
+"""
+Навыки веб-поиска.
+"""
+import re
+import random
 import webbrowser
-import wikipedia
-import pyjokes
 from datetime import datetime
-import os
+import requests
 from utils.logger import logger
+
+try:
+    import wikipedia
+except ImportError:
+    wikipedia = None
+    logger.warning("Библиотека wikipedia не установлена. Установите: pip install wikipedia")
 
 
 class WebSearchSkill:
-    """Навык: веб-поиск и полезные функции."""
+    """Навык веб-поиска."""
 
     def __init__(self):
-        # Настраиваем Википедию.
-        wikipedia.set_lang("ru")
-
-        # Карта сайтов для быстрого открытия.
-        self.websites = {
-            'youtube': 'https://youtube.com',
-            'google': 'https://google.com',
-            'яндекс': 'https://yandex.ru',
-            'вконтакте': 'https://vk.com',
-            'почта': 'https://mail.google.com',
-            'github': 'https://github.com',
-            'переводчик': 'https://translate.google.com'
-        }
-
-    def search_web(self, query: str) -> str:
-        """Поиск в интернете."""
-        try:
-            search_url = f"https://www.google.com/search?q={query}"
-            webbrowser.open(search_url)
-            return f"Ищу в интернете: {query}"
-        except Exception as e:
-            logger.error(f"Web search error: {e}")
-            return f"Не удалось выполнить поиск: {query}"
-
-    def search_wikipedia(self, query: str) -> str:
-        """Поиск в Википедии."""
-        try:
-            summary = wikipedia.summary(query, sentences=2)
-            return f"Согласно Википедии: {summary}"
-        except wikipedia.exceptions.DisambiguationError as e:
-            return f"Уточните запрос. Возможные варианты: {', '.join(e.options[:3])}"
-        except wikipedia.exceptions.PageError:
-            return f"В Википедии нет статьи по запросу: {query}"
-        except Exception as e:
-            logger.error(f"Wikipedia search error: {e}")
-            return "Не удалось получить информацию из Википедии"
-
-    def tell_joke(self) -> str:
-        """Рассказать шутку."""
-        try:
-            joke = pyjokes.get_joke(language='ru')
-            if not joke:
-                joke = pyjokes.get_joke(language='en')
-                joke = f"(На английском) {joke}"
-            return joke
-        except:
-            return "Почему программисты не любят природу? Слишком много багов!"
+        # Список шуток на случай, если API не работает
+        self.jokes = [
+            "Почему программисты путают Хэллоуин и Рождество? Потому что 31 Oct = 25 Dec!",
+            "Что сказал 0 числу 8? Хороший ремешок!",
+            "Почему у программистов всегда холодно? Потому что они работают с Windows!",
+            "Как называется ошибка в программе? Баг. А как называется ошибка в шутке? Шутка!",
+            "Почему программист не может отличить кофе от чая? Потому что он всегда пьёт Java!",
+            "Что говорит программист, когда видит ошибку? 'Это не баг, это фича!'",
+            "Почему программисты не любят природу? Потому что там слишком много багов!",
+            "Сколько программистов нужно, чтобы заменить лампочку? Ни одного — это аппаратная проблема!",
+            "Почему программисты предпочитают темный режим? Потому что свет привлекает баги!",
+            "Что такое идеальный программист? Тот, кто не пишет баги, а просто их документирует как фичи!"
+        ]
 
     def get_time(self) -> str:
         """Получить текущее время."""
@@ -66,59 +41,82 @@ class WebSearchSkill:
     def get_date(self) -> str:
         """Получить текущую дату."""
         now = datetime.now()
-        days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']
-        months = [
-            'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-            'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-        ]
+        days = {
+            0: "понедельник", 1: "вторник", 2: "среда",
+            3: "четверг", 4: "пятница", 5: "суббота", 6: "воскресенье"
+        }
+        return f"Сегодня {days[now.weekday()]}, {now.strftime('%d %B %Y года')}"
 
-        weekday = days[now.weekday()]
-        day = now.day
-        month = months[now.month - 1]
-        year = now.year
+    def get_joke(self) -> str:
+        """Вернуть случайную шутку."""
+        return random.choice(self.jokes)
 
-        return f"Сегодня {weekday}, {day} {month} {year} года"
+    def search_web(self, query: str) -> str:
+        """Поиск в интернете."""
+        if not query:
+            return "Что ищем?"
 
-    def open_website(self, site_name: str) -> str:
+        import webbrowser
+        search_url = f"https://yandex.ru/search/?text={query}"
+        webbrowser.open(search_url)
+        return f"Ищу в интернете: {query}"
+
+    def open_website(self, command: str) -> str:
         """Открыть веб-сайт."""
-        site_lower = site_name.lower()
+        import webbrowser
+        sites = {
+            "ютуб": "https://www.youtube.com",
+            "youtube": "https://www.youtube.com",
+            "яндекс": "https://yandex.ru",
+            "yandex": "https://yandex.ru",
+            "гугл": "https://www.google.com",
+            "google": "https://www.google.com",
+            "вк": "https://vk.com",
+            "vk": "https://vk.com",
+            "телеграм": "https://web.telegram.org",
+            "telegram": "https://web.telegram.org"
+        }
 
-        for keyword, url in self.websites.items():
-            if keyword in site_lower:
-                webbrowser.open(url)
-                return f"Открываю {keyword}"
-
-        # Если сайт не найден в списке, пробуем открыть как URL.
-        if site_lower.startswith(('http://', 'https://')):
-            webbrowser.open(site_lower)
-            return f"Открываю {site_lower}"
-
-        return f"Не знаю как открыть {site_name}"
-
-    def process(self, command: str) -> str:
-        """Обработать команду веб-поиска."""
         command_lower = command.lower()
+        for name, url in sites.items():
+            if name in command_lower:
+                webbrowser.open(url)
+                return f"Открываю {name}"
 
-        if 'шутка' in command_lower or 'пошути' in command_lower:
-            return self.tell_joke()
+        # Если сайт не найден в списке, пробуем открыть как есть
+        webbrowser.open(command)
+        return f"Открываю {command}"
 
-        elif 'время' in command_lower:
-            return self.get_time()
+    def search_wikipedia(self, query: str) -> str:
+        """Поиск в Википедии."""
+        if not query:
+            return "Что именно вы хотите найти в Википедии?"
 
-        elif 'дата' in command_lower or 'число' in command_lower:
-            return self.get_date()
+        # Проверяем, установлена ли библиотека
+        if wikipedia is None:
+            return "Библиотека wikipedia не установлена. Установите: pip install wikipedia"
 
-        elif 'открой' in command_lower:
-            site = command_lower.replace('открой', '').strip()
-            return self.open_website(site)
-
-        elif 'найди в интернете' in command_lower or 'поищи' in command_lower:
-            query = command_lower.replace('найди в интернете', '').replace('поищи', '').strip()
-            return self.search_web(query)
-
-        elif 'википедия' in command_lower:
-            query = command_lower.replace('википедия', '').strip()
-            return self.search_wikipedia(query)
-
-        else:
-            return "Скажите что искать или что открыть"
+        try:
+            # Настройка для русского языка
+            wikipedia.set_lang("ru")
+            
+            # Пробуем получить краткую информацию
+            try:
+                summary = wikipedia.summary(query, sentences=3)
+                return f"Согласно Википедии: {summary}"
+            except wikipedia.DisambiguationError as e:
+                options = ', '.join(e.options[:5])
+                return f"Уточните запрос. Возможно, вы имели в виду: {options}"
+            except wikipedia.PageError:
+                # Пробуем поискать похожие страницы
+                try:
+                    results = wikipedia.search(query, results=3)
+                    if results:
+                        return f"Страница '{query}' не найдена. Возможно, вы искали: {', '.join(results)}"
+                    else:
+                        return f"Страница '{query}' не найдена в Википедии"
+                except:
+                    return f"Страница '{query}' не найдена в Википедии"
+        except Exception as e:
+            logger.error(f"Wikipedia error: {e}")
+            return f"Не удалось получить информацию из Википедии: {e}"

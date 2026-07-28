@@ -95,8 +95,8 @@ class StateManager:
         old_state = self.state
         self.state = new_state
 
-        if old_state != new_state:
-            print(f"Состояние: {old_state.value} -> {new_state.value}")
+     #  if old_state != new_state:
+     #      print(f"Состояние: {old_state.value} -> {new_state.value}")
 
     def get_state(self) -> AssistantState:
         """Получить текущее состояние."""
